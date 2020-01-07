@@ -8,7 +8,9 @@ import (
 	"os"
 )
 
-const redirectURI="http://localhost:3000/callback/"
+const redirectURI="http://localhost:3000/callback"
+
+type JClient spotify.Client
 
 var(
 	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadPrivate)
@@ -18,6 +20,8 @@ var(
 
 func completeAuth(w http.ResponseWriter, r * http.Request) {
 	token, err := auth.Token(state, r)
+
+
 	if err != nil {
 		http.Error(w, "Could not get token", http.StatusForbidden)
 		log.Fatal(err)
@@ -35,7 +39,9 @@ func completeAuth(w http.ResponseWriter, r * http.Request) {
 }
 
 func main() {
+
 	http.HandleFunc("/callback", completeAuth)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Got request for:", r.URL.String())
 	})
@@ -47,12 +53,33 @@ func main() {
 
 	fmt.Println("Please log into Spotify by visiting the following page in your browser: %v", url)
 
-	client := <-ch
+	JClient := <-ch
 
-	user, err := client.CurrentUser()
+	user, err := JClient.CurrentUser()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Success. Logged in as:", user.DisplayName)
+
+	history, err := JClient.RecentlyPlayed()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(history)
+
 }
+
+func (c *JClient) RecentlyPlayed(opt *Options) (*RecentlyPlayed, error) {
+	spotifyURL := c.baseURL + "me/player/recently-played"
+
+	var result RecentlyPlayed
+
+	err := c.get(spotifyURL, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 
