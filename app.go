@@ -2,35 +2,39 @@ package main
 
 import (
 	"fmt"
-	"github.com/zmb3/spotify"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/zmb3/spotify"
 )
 
-const redirectURI="http://localhost:3000/callback/"
+const redirectURI = "http://localhost:3000/callback"
 
-var(
-	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadPrivate)
-	ch = make(chan *spotify.Client)
+var (
+	auth  = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadRecentlyPlayed)
+	ch    = make(chan *spotify.Client)
 	state = "abasd123"
 )
 
-func completeAuth(w http.ResponseWriter, r * http.Request) {
+type track struct {
+}
+
+func completeAuth(w http.ResponseWriter, r *http.Request) {
 	token, err := auth.Token(state, r)
 	if err != nil {
 		http.Error(w, "Could not get token", http.StatusForbidden)
 		log.Fatal(err)
 	}
 	if st := r.FormValue("state"); st != state {
-		http.NotFound(w,r)
+		http.NotFound(w, r)
 		log.Fatalf("State mismatch: %s != %s\n", st, state)
 	}
 
 	client := auth.NewClient(token)
 	fmt.Fprintf(w, "Login Completed!")
 
-	ch <-&client
+	ch <- &client
 
 }
 
@@ -45,7 +49,7 @@ func main() {
 	auth.SetAuthInfo(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"))
 	url := auth.AuthURL(state)
 
-	fmt.Println("Please log into Spotify by visiting the following page in your browser: %v", url)
+	fmt.Println("Please log into Spotify by visiting the following page in your browser:", url)
 
 	client := <-ch
 
@@ -54,5 +58,13 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("Success. Logged in as:", user.DisplayName)
-}
 
+	recentlyPlayed, err := client.PlayerRecentlyPlayed()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	returnValue := recentlyPlayed[0].Track.ID
+
+	fmt.Printf("Track=%s, Played=%s", recentlyPlayed[0].Track.ID, recentlyPlayed[0].PlayedAt)
+}
