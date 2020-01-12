@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+  "time"
 
 	"github.com/zmb3/spotify"
 )
@@ -17,8 +18,12 @@ var (
 	state = "abasd123"
 )
 
-type track struct {
+type Track struct {
+  trackID string
+  trackTitle string
+  playedAt time.Time
 }
+
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
 	token, err := auth.Token(state, r)
@@ -59,12 +64,19 @@ func main() {
 	}
 	fmt.Println("Success. Logged in as:", user.DisplayName)
 
-	recentlyPlayed, err := client.PlayerRecentlyPlayed()
+	options := spotify.RecentlyPlayedOptions{
+		Limit:         50,
+	}
+	recentlyPlayed, err := client.PlayerRecentlyPlayedOpt(options)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	returnValue := recentlyPlayed[0].Track.ID
+  track := Track{
+    trackID: string(recentlyPlayed[0].Track.ID),
+    trackTitle: recentlyPlayed[0].Track.Name,
+	playedAt: recentlyPlayed[0].PlayedAt,
+  }
 
-	fmt.Printf("Track=%s, Played=%s", recentlyPlayed[0].Track.ID, recentlyPlayed[0].PlayedAt)
+	fmt.Printf("Track Object=%v, Raw PlayedAt Output:=%s", track, recentlyPlayed[0].PlayedAt)
 }
