@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-  "time"
+	"time"
 
 	"github.com/zmb3/spotify"
 )
@@ -17,13 +17,6 @@ var (
 	ch    = make(chan *spotify.Client)
 	state = "abasd123"
 )
-
-type Track struct {
-  trackID string
-  trackTitle string
-  playedAt time.Time
-}
-
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
 	token, err := auth.Token(state, r)
@@ -42,6 +35,14 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	ch <- &client
 
 }
+
+type playEntry struct {
+	trackID  string
+	playedAt time.Time
+}
+
+var playHistory []playEntry
+var trackLibrary []spotify.SimpleTrack
 
 func main() {
 	http.HandleFunc("/callback", completeAuth)
@@ -64,19 +65,31 @@ func main() {
 	}
 	fmt.Println("Success. Logged in as:", user.DisplayName)
 
-	options := spotify.RecentlyPlayedOptions{
-		Limit:         50,
+	recentlyPlayed := getRecentlyPlayed(client)
+	lastPlayed := playHistory[len(playHistory)-1].playedAt
+
+	for _, trackReturn := range recentlyPlayed {
+		if trackReturn.PlayedAt > lastPlayed {
+			tmpTrack := playEntry{
+				trackID:  string(trackReturn.Track.ID),
+				playedAt: trackReturn.PlayedAt,
+			}
+			playHistory = append(playHistory, tmpTrack)
+		}
 	}
+
+	fmt.Printf("Play history: %v", playHistory)
+
+}
+
+func getRecentlyPlayed(client *spotify.Client) []spotify.RecentlyPlayedItem {
+	options := &spotify.RecentlyPlayedOptions{Limit: 50}
+
 	recentlyPlayed, err := client.PlayerRecentlyPlayedOpt(options)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-  track := Track{
-    trackID: string(recentlyPlayed[0].Track.ID),
-    trackTitle: recentlyPlayed[0].Track.Name,
-	playedAt: recentlyPlayed[0].PlayedAt,
-  }
+	return recentlyPlayed
 
-	fmt.Printf("Track Object=%v, Raw PlayedAt Output:=%s", track, recentlyPlayed[0].PlayedAt)
 }
