@@ -69,7 +69,7 @@ func main() {
 	lastPlayed := playHistory[len(playHistory)-1].playedAt
 
 	for _, trackReturn := range recentlyPlayed {
-		if trackReturn.PlayedAt > lastPlayed {
+		if trackReturn.PlayedAt.After(lastPlayed) {
 			tmpTrack := playEntry{
 				trackID:  string(trackReturn.Track.ID),
 				playedAt: trackReturn.PlayedAt,
