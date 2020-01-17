@@ -66,20 +66,44 @@ func main() {
 	fmt.Println("Success. Logged in as:", user.DisplayName)
 
 	recentlyPlayed := getRecentlyPlayed(client)
-	lastPlayed := playHistory[len(playHistory)-1].playedAt
 
-	for _, trackReturn := range recentlyPlayed {
-		if trackReturn.PlayedAt.After(lastPlayed) {
-			tmpTrack := playEntry{
-				trackID:  string(trackReturn.Track.ID),
-				playedAt: trackReturn.PlayedAt,
-			}
-			playHistory = append(playHistory, tmpTrack)
-		}
+	for _, track := range recentlyPlayed {
+		addTrackPlayHistory(track)
+		addTrackLibrary(track.Track)
 	}
 
-	fmt.Printf("Play history: %v", playHistory)
+	lastPlayed := playHistory[len(playHistory)-1].playedAt
 
+	timer := time.Tick(time.Duration(10) * time.Second)
+
+	for range timer {
+		fmt.Println("Timer ping")
+		recentlyPlayed = getRecentlyPlayed(client)
+		for _, track := range recentlyPlayed {
+			if track.PlayedAt.After(lastPlayed) {
+				addTrackPlayHistory(track)
+			}
+			addTrackLibrary(track.Track)
+		}
+
+		lastPlayed = playHistory[len(playHistory)-1].playedAt
+
+		fmt.Printf("Play history: %s", playHistory[len(playHistory)-1])
+		fmt.Printf("Track Library: %v", trackLibrary[len(trackLibrary)-1])
+	}
+
+}
+
+func addTrackLibrary(track spotify.SimpleTrack) {
+	trackLibrary = append(trackLibrary, track)
+}
+
+func addTrackPlayHistory(track spotify.RecentlyPlayedItem) {
+	tmpTrack := playEntry{
+		trackID:  string(track.Track.ID),
+		playedAt: track.PlayedAt,
+	}
+	playHistory = append(playHistory, tmpTrack)
 }
 
 func getRecentlyPlayed(client *spotify.Client) []spotify.RecentlyPlayedItem {
