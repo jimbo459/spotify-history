@@ -19,7 +19,20 @@ var (
 
 func main() {
 	// Start an HTTP server
-	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request){
+		token, err := auth.Token(state, r)
+		if err != nil {
+			http.Error(w,"Couldn't get token", http.StatusForbidden)
+			log.Fatal(err)
+		}
+		if st := r.FormValue("state"); st != state {
+			http.NotFound(w,r)
+			log.Fatalf("State mismatch: %s != %s\n", st, state)
+		}
+		client := auth.NewClient(token)
+		fmt.Fprintf(w,"Login complete")
+		ch <- &client
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received request: %v\n", r.URL.String())
 	})
@@ -48,6 +61,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = writeHistory(sqlstmt, lastPlayed)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func writeHistory(statement *sql.Stmt, lastPlayed []spotify.RecentlyPlayedItem) error {
 	for _,track := range lastPlayed{
 		var artist []string
 		var artistId []string
@@ -56,24 +77,11 @@ func main() {
 			artist = append(artist, tempArtist.Name)
 			artistId = append(artistId, string(tempArtist.ID))
 		}
-		_,err = sqlstmt.Exec(track.PlayedAt, track.Track.Name, track.Track.ID, strings.Join(artist, ","), strings.Join(artistId, ","))
+		_, err := statement.Exec(track.PlayedAt, track.Track.Name, track.Track.ID, strings.Join(artist, ","), strings.Join(artistId, ","))
 		if err != nil {
 			log.Fatal(err)
+			return err
 		}
 	}
-}
-
-func completeAuth(w http.ResponseWriter, r *http.Request) {
-	token, err := auth.Token(state, r)
-	if err != nil {
-		http.Error(w,"Couldn't get token", http.StatusForbidden)
-		log.Fatal(err)
-	}
-	if st := r.FormValue("state"); st != state {
-		http.NotFound(w,r)
-		log.Fatalf("State mismatch: %s != %s\n", st, state)
-	}
-	client := auth.NewClient(token)
-	fmt.Fprintf(w,"Login complete")
-	ch <- &client
+	return nil
 }

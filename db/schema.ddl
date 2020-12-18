@@ -5,5 +5,5 @@ CREATE TABLE play_history (
     track_name text,
     track_id varchar(22),
     artist_name text,
-    artist_id text    
+    artist_id text
 );
