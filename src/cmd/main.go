@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/zmb3/spotify"
 	"log"
 	"net/http"
-	"time"
+	_ "github.com/go-sql-driver/mysql"
+	"strings"
 )
 
 var (
@@ -29,15 +31,36 @@ func main() {
 	// need to understand this better...
 	client := <-ch
 
-	for x := 0; x < 30; x++ {
-		lastPlayed, err := client.PlayerRecentlyPlayed()
+	lastPlayed, err := client.PlayerRecentlyPlayed()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Successfully got last played tracks")
+
+	db, err := sql.Open("mysql", "root:password@tcp(127.0.0.1:3306)/test_db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	sqlstmt, er := db.Prepare("INSERT INTO play_history(played_at, track_name, track_id, artist_name, artist_id) VALUES (?,?,?,?,?)")
+	if er != nil {
+		log.Fatal(err)
+	}
+
+	for _,track := range lastPlayed{
+		var artist []string
+		var artistId []string
+
+		for _, tempArtist := range track.Track.Artists {
+			artist = append(artist, tempArtist.Name)
+			artistId = append(artistId, string(tempArtist.ID))
+		}
+		_,err = sqlstmt.Exec(track.PlayedAt, track.Track.Name, track.Track.ID, strings.Join(artist, ","), strings.Join(artistId, ","))
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("Attempt %v: Recently Played %v\n", x, lastPlayed[0])
-		time.Sleep(2 * time.Minute)
 	}
-
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
