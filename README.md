@@ -9,9 +9,12 @@ The learning outcome is to understand:
 
 ### Deploying 
 
+[Helpful guide](https://medium.com/@migueldoctor/run-mysql-phpmyadmin-locally-in-3-steps-using-docker-74eb735fa1fc) for deploying mysql
+
 Create a [docker volume](https://docs.docker.com/storage/volumes/)
 
-Create
+Create a DB
+- need to assign key to played_at [(MUL key)](https://www.tutorialspoint.com/create-mysql-column-with-key-mul)
 
 Run mysql docker container:
 ```bigquery

@@ -57,7 +57,7 @@ func main() {
 		}
 		defer db.Close()
 
-		sqlstmt, er := db.Prepare("INSERT INTO play_history(played_at, track_name, track_id, artist_name, artist_id) VALUES (?,?,?,?,?)")
+		sqlstmt, er := db.Prepare("INSERT INTO play_history(played_at, track_name, track_id, artist_name, artist_id) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE played_at=played_at")
 		if er != nil {
 			log.Fatal(err)
 		}
@@ -72,7 +72,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		time.Sleep(90 * time.Minute)
+		time.Sleep(1 * time.Minute)
 	}
 }
 
